@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+  ],
+  "packageRules": [
+    {
+      // First release used Kotlin version + project version which sorts higher than new versions.
+      "matchPackageNames": ["co.touchlab:cklib-gradle-plugin"],
+      "allowedVersions": "!/1\\.5\\.31\\.2/",
+    },
+    {
+      // Compose compiler is tightly coupled to Kotlin version
+      "groupName": "Kotlin and Compose",
+      "matchPackagePrefixes": [
+        "androidx.compose.compiler",
+        "org.jetbrains.kotlin:kotlin",
+      ],
+    },
+  ],
+}
