@@ -1,0 +1,20 @@
+# IntelliJ IDEA
+.idea
+*.iml
+
+# Gradle
+.gradle
+build/
+local.properties
+reports
+jacoco.exec
+.externalNativeBuild
+.cxx
+
+# Release
+docs/0.x
+
+# Testing
+zipline-gradle-plugin/src/test/projects/**/gradle/wrapper
+
+generated-zipline-webpack-config.js
