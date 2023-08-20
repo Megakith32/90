@@ -1,0 +1,112 @@
+/*
+ * Copyright (C) 2021 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package app.cash.zipline.loader
+
+import kotlin.test.assertEquals
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
+import org.junit.Test
+
+@Suppress("UnstableApiUsage")
+@ExperimentalCoroutinesApi
+class LoadOrFallbackTest {
+  private val tester = LoaderTester()
+
+  @Test
+  fun preferNetworkWhenThatWorks() = runBlocking {
+    assertEquals("apple", tester.success("red", "apple"))
+  }
+
+  @Test
+  fun fallBackToPreviousNetworkWhenSomethingFails() = runBlocking {
+    assertEquals("apple", tester.success("red", "apple"))
+    assertEquals("apple", tester.failureManifestFetchFails("red"))
+  }
+
+  @Test
+  fun fallBackBecauseManifestFetchFails() = runBlocking {
+    tester.seedEmbedded("red", "firetruck")
+    assertEquals("firetruck", tester.failureManifestFetchFails("red"))
+  }
+
+  @Test
+  fun fallBackBecauseCodeFetchFails() = runBlocking {
+    tester.seedEmbedded("red", "firetruck")
+    assertEquals("firetruck", tester.failureCodeFetchFails("red"))
+  }
+
+  @Test
+  fun fallBackBecauseCodeLoadFails() = runBlocking {
+    tester.seedEmbedded("red", "firetruck")
+    assertEquals("firetruck", tester.failureCodeLoadFails("red"))
+  }
+
+  @Test
+  fun fallBackBecauseCodeRunFails() = runBlocking {
+    tester.seedEmbedded("red", "firetruck")
+    assertEquals("firetruck", tester.failureCodeRunFails("red"))
+  }
+
+  @Test
+  fun successfulNetworkUpdatesFallback() = runBlocking {
+    assertEquals("apple", tester.success("red", "apple"))
+    assertEquals("apple", tester.failureManifestFetchFails("red"))
+    assertEquals("firetruck", tester.success("red", "firetruck"))
+    assertEquals("firetruck", tester.failureManifestFetchFails("red"))
+  }
+
+  @Test
+  fun eachApplicationHasItsOwnLastWorkingNetwork() = runBlocking {
+    assertEquals("apple", tester.success("red", "apple"))
+    assertEquals("sky", tester.success("blue", "sky"))
+    assertEquals("apple", tester.failureManifestFetchFails("red"))
+    assertEquals("sky", tester.failureManifestFetchFails("blue"))
+  }
+
+  @Test
+  fun eachApplicationHasItsOwnEmbedded() = runBlocking {
+    tester.seedEmbedded("red", "apple")
+    tester.seedEmbedded("blue", "sky")
+    assertEquals("apple", tester.failureManifestFetchFails("red"))
+    assertEquals("sky", tester.failureManifestFetchFails("blue"))
+  }
+
+  @Test
+  fun anyLastWorkingNetworkNotPruned() = runBlocking {
+    assertEquals("apple", tester.success("red", "apple"))
+    assertEquals("sky", tester.success("blue", "sky"))
+    assertEquals(0, tester.prune())
+    assertEquals("apple", tester.failureManifestFetchFails("red"))
+    assertEquals("sky", tester.failureManifestFetchFails("blue"))
+  }
+
+  @Test
+  fun successfulNetworkMakesPreviousNetworkPrunable() = runBlocking {
+    assertEquals("apple", tester.success("red", "apple"))
+    assertEquals(2, tester.countFiles {
+      assertEquals("firetruck", tester.success("red", "firetruck"))
+    })
+  }
+
+  @Test
+  fun loadFailureIsPrunable() = runBlocking {
+    assertEquals("apple", tester.success("red", "apple"))
+    assertEquals(1, tester.countFiles {
+      assertEquals("apple", tester.failureCodeLoadFails("red"))
+    })
+    assertEquals(-1, tester.prune())
+  }
+}
